@@ -5,7 +5,8 @@ import { WagmiProvider } from 'wagmi'
 import { http, createConfig } from 'wagmi'
 import { base, mainnet } from 'wagmi/chains'
 import { injected, metaMask, walletConnect } from 'wagmi/connectors'
-
+import Navbar from "@/components/Navbar";
+import { ContextProvider } from "@/context/contextProvider";
 const queryClient = new QueryClient()
 const projectId = '2cca2410aa0ba1d8a172daba4c777920'
 const config = createConfig({
@@ -40,7 +41,10 @@ export default function RootLayout({
       >
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}> 
+        <ContextProvider>
+            <Navbar />
             {children}
+        </ContextProvider>
           </QueryClientProvider> 
         </WagmiProvider>
       </body>

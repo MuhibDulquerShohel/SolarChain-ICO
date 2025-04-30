@@ -9,8 +9,12 @@ export function Account() {
   return (
     <div>
       
-      {address && <div>{ address}</div>}
-      <button onClick={() => disconnect()}>Disconnect</button>
+      {address && (
+        <div>
+          {address.slice(0, 6)}...{address.slice(-4)}
+        </div>
+      )}
+      <button className=' hover:cursor-pointer hover:text-accent'  onClick={() => disconnect()}>Disconnect</button>
     </div>
   )
 }
