@@ -1,134 +1,144 @@
 "use client";
-import { useReadContract,useWriteContract  } from "wagmi";
-import { sepolia, bscTestnet, opBNBTestnet } from 'wagmi/chains'
+
+
 import { useEffect, useState } from "react";
-import { readContract } from '@wagmi/core'
-import { wagmiContractConfig } from './contacts'
-import  abi  from '../context/abi.json'
-import { config } from "@/walletConnect/config";
-// import Image from "next/image";
-// import { Account } from "@/walletConnect/account";
-// import { WalletOptions } from "@/walletConnect/walletOptions";
-// import { useAccount } from 'wagmi'
-// import { useEffect, useState } from "react";
-import { useWeb3Context } from "@/context/contextProvider";
+import { useWeb3Context, UserInfo } from "@/context/contextProvider";
+
+
 export default function Home() {
-  const [owner, setOwner] = useState<string>("")
-  const { hardCap, softCap, totalSold, getOwner } = useWeb3Context();
-  const { data: hash, writeContract } = useWriteContract()
-  // const {readContract} = useReadContract()
-  // const [hardCap, setHardCap] = useState("")
-  // function ConnectWallet() {
-  //   const { isConnected } = useAccount()
-  //   if (isConnected) return <Account />
-  //   return <WalletOptions />
-  // }
-  const updateTokenPrice = async () => {
-    console.log("updating price please wait...")
-    writeContract({ 
-      abi: abi,
-      address: '0xE6dAEE6c1716091F41158b58F1e68401eb43A69c',
-      functionName: 'updateTokenPrice',
-      args: [
-        11,
-      ],
-   })
+  const [percentage, setPercentage] = useState<number>(0)
+  const [hardCap, setHardCap] = useState<string>("")
+  const [softCap, setSoftCap] = useState<string>("")
+  const [totalSold, setTotalSold] = useState<string>("")
+  const [currentPrice, setCurrentPrice] = useState<string>("")
+  const [amountToBuy, setAmountToBuy] = useState<number>(0)
+  const [outputAmount, setOutputAmount] = useState<number>()
+  const [userInfo, setUserInfo] = useState<UserInfo>({
+    amountPaid: 0n,
+    remainToClaim: 0n,
+    tokensClaimed: 0n,
+    tokensPurchased: 0n,
+    user: "0x0000000000000000000000000000000000000000",
+  });
+  
+  const { getHardCap, getSoftCap, getTotalSold, buyToken, getTokenPrice, getUserInfo } = useWeb3Context();
+  
+
+
+
+   const sellsPercentage = async () => {
+    const totalSoldNumber = Number(totalSold) ;
+    const hardCapNumber = Number(hardCap);
+
+    const progress =
+        hardCapNumber > 0 ? Math.floor((totalSoldNumber / hardCapNumber) * 100) : 0;
+
+        return progress;
    }
-   function mintf() { 
-    console.log("start")
-    // const formData = 
-    // const tokenId =  
-    writeContract({
-      address: '0xE6dAEE6c1716091F41158b58F1e68401eb43A69c',
-      abi: abi,
-      functionName: 'updateTokenPrice',
-      args: [11],
-      // chainId: sepolia.id,
-    })
-    console.log("done")
-  } 
-  // const getOwner = async() =>  {
-  //   console.log("getting owner, please wait...");
-  //   const result = await readContract(config, {
-  //     abi:abi,
-  //     address: '0xE6dAEE6c1716091F41158b58F1e68401eb43A69c',
-  //     functionName: 'owner',
-  //     args: [],
-  //     chainId: sepolia.id,
-  //   })
-  // console.log("balance is" ,result )
-  //   return result
-  // }
+
   useEffect(() => {
-    // console.log("it's being called")
     const getInfo = async () => {
-      const cap  = await getOwner();
-      console.log("setting up owner: ", cap);
-      setOwner(cap?.toString());
+      // const owner  = await getOwner();
+      const hard = await getHardCap();
+      const soft = await getSoftCap();
+      const sold = await getTotalSold();
+      const cPrice = await getTokenPrice();
+      const info = await getUserInfo();
+      setUserInfo(info);
+      setHardCap(hard?.toString());
+      
+      setSoftCap(soft?.toString());
+      
+      setTotalSold(sold?.toString());
+      setCurrentPrice(cPrice?.toString());
+      
     };
     getInfo();
-  });
+
+    
+  },[]);
+
+  useEffect(() => {
+    const calculatePercentage = async () => {
+      const progress = await sellsPercentage();
+      setPercentage(progress);
+    };
+    calculatePercentage();
+  }, [totalSold, hardCap]);
 
   return (
     
     <div className="hero bg-base-200 min-h-screen flex w-full items-center justify-between">
-      <button 
-      onClick={() => updateTokenPrice()
-      //   writeContract({ 
-      //     abi: abi,
-      //     address: '0xE6dAEE6c1716091F41158b58F1e68401eb43A69c',
-      //     functionName: 'updateTokenPrice',
-      //     args: [
-      //       11,
-      //     ],
-      //  })
-      }
-    >
-      Transfer
-    </button>
+      
       <div className="flex flex-col gap-3 ml-5 max-w-1/4">
         <div className="card min-w-full bg-base-100 card-xs shadow-sm flex flex-col justify-center items-center">
           <div className="card-body">
-            <h2 className="card-title items-center justify-center">Hard Cap: {hardCap} </h2>
-            <h2 className="card-title items-center justify-center">Soft Cap: {softCap} </h2>
-            <h2 className="card-title items-center justify-center">Total Sold: {totalSold}</h2>
-            <h2 className="card-title items-center justify-center">owner: {owner}</h2>
-            <h2 className="card-title items-center justify-center">
-              <button onClick={() => getOwner()}>get owner</button>
-            </h2>
-            <div className="justify-center card-actions">
-            <div className="radial-progress" style={{ "--value": 70 }  as React.CSSProperties  } 
-  aria-valuenow={70} role="progressbar">70%</div>
+            <h2 className="card-title items-center justify-center">Hard Cap: {(Number(hardCap)  / 1e9).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} Billion </h2>
+            <h2 className="card-title items-center justify-center">Soft Cap: {(Number(softCap)  / 1e9).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} Billion </h2>
+            <h2 className="card-title items-center justify-center">Total Sold: {(Number(totalSold)  / 1e9).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} Billion</h2>
+            
+            <div className="justify-center items-center card-actions">
+            <div className="radial-progress" style={{ "--value": {percentage} }  as React.CSSProperties  } 
+  aria-valuenow={percentage} role="progressbar"><div className="flex justify-center items-center">{percentage}%</div></div>
           </div>
         </div>
       </div>
       </div>
         <div className="hero-content text-center">
         <div className="max-w-md">
-          <h1 className="text-5xl font-bold" onClick={()=>mintf()}>Buy Tokens</h1>
-          <button onClick={()=>mintf()}>Mint Token</button>
+          <h1 className="text-5xl font-bold">Buy Tokens</h1>
             <div className="flex flex-col gap-3 mt-0.5 justify-center items-center">
               <fieldset className="fieldset">
           
-                <input type="text" className="input" placeholder="USDT Amount" />
+                <input type="number" className="input" placeholder="USDT Amount" 
+  //               onChange={(e) => {
+  //   const value = parseFloat(e.target.value);
+  //   setAmountToBuy(isNaN(value) ? Number(0) : value);
+  //   setOutputAmount(value * (Number (currentPrice)));
+  // }}
+  onChange={(e) => {
+    const value = parseFloat(e.target.value);
+    if (isNaN(value)) {
+      setAmountToBuy(Number(0));
+      setOutputAmount(Number(0));
+    } else {
+      setAmountToBuy(Number(value));
+      setOutputAmount(value * Number(currentPrice));
+    }
+  }}
+   />
                 
               </fieldset>
               <fieldset className="fieldset">
                 
-                <input type="text" className="input"   placeholder="SCC You will get" />
+                {/* <input type="text" className="input"   placeholder={outputAmount?.toString() && outputAmount.toString() != "" ? outputAmount : "SCC You will get"} /> */}
+                <input
+  type="text"
+  className="input"
+  value={outputAmount !== undefined ? outputAmount.toFixed(0) : ""}
+  placeholder="SCC You will get"
+  readOnly
+/>
                 
               </fieldset>
             </div>
-      <button className="btn btn-primary">Buy</button>
+      <button className="btn btn-primary"  onClick={()=> buyToken(amountToBuy)}>Buy</button>
     </div>
   </div>
   <div className="flex flex-col gap-3 mr-5 max-w-1/4">
         <div className="card min-w-full bg-base-100 card-xs shadow-sm flex flex-col justify-center items-center">
           <div className="card-body">
-            <h2 className="card-title items-center justify-center">Purchased Amount: </h2>
-            <h2 className="card-title items-center justify-center">Paid USDT: </h2>
-            <h2 className="card-title items-center justify-center">Claimed Amount: </h2>
-            <h2 className="card-title items-center justify-center">Remain to claim: </h2>
+            <h2 className="card-title items-center justify-center">Current Token Price: {currentPrice ? 1 / Number(currentPrice): ""} </h2>
+            <h2 className="card-title items-center justify-center">Purchased Amount: {userInfo ? userInfo.tokensPurchased : ""}</h2>
+            <h2 className="card-title items-center justify-center">Paid USDT: {userInfo.amountPaid}</h2>
+            <h2 className="card-title items-center justify-center">Claimed Amount: {userInfo.tokensClaimed}</h2>
+            <h2 className="card-title items-center justify-center">Remain to claim: {userInfo.remainToClaim}</h2>
             
             
         </div>

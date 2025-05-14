@@ -8,20 +8,29 @@ import {
 } from "react";
 import { readContract } from "@wagmi/core";
 import { config } from "@/walletConnect/config";
-import { useReadContract,useWriteContract  } from "wagmi";
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from "./constants";
+import { useWriteContract, useAccount  } from "wagmi";
+import { CONTRACT_ADDRESS, CONTRACT_ABI, TOKEN_ABI, TOKEN_ADDRESS } from "./constants";
+import { formatEther, parseEther } from "viem";
 import { useEffect } from "react";
 import { sepolia } from "viem/chains";
 export interface Web3ContextType {
-  currentAccount: string;
-  hardCap: string;
-  softCap: string;
-  totalSold: string;
-  userInfo: string;
-  mint: () => void; 
-  getOwner: () => Promise<string>;
+  getUserInfo: () => Promise<UserInfo>;
+  getHardCap: () => Promise<string>;
+  getSoftCap: () => Promise<string>;
+  getTotalSold: () => Promise<string>;
+  getTokenPrice: () => Promise<string>;
+  buyToken: (arg0:number ) => Promise<boolean | undefined>;
   
 }
+
+export interface UserInfo {
+  amountPaid: bigint;
+  remainToClaim: bigint;
+  tokensClaimed: bigint;
+  tokensPurchased: bigint;
+  user: string;
+}
+
 
 export const Web3Context = createContext<Web3ContextType | null>(null);
 
@@ -30,96 +39,156 @@ interface ContextProviderProps {
 }
 
 export const ContextProvider = ({ children }: ContextProviderProps) => {
-  const [currentAccount] = useState<string>("0x0000");
+   const { isConnected, address } = useAccount()
+  const { writeContract } = useWriteContract()
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const { data: hash, writeContract } = useWriteContract()
+  // const { data: hash, writeContract } = useWriteContract()
+  const buyToken = async (amount: number) => {
+    
+    console.log("value from the user input", amount)
+    if(amount === undefined){
+      console.log("amount is undefined")
+      alert("amount is undefined")
+    }
+    const parsedAmount = parseEther(amount?.toString())
+    const allowance = await getAllowance();
+    if(BigInt(allowance) < parsedAmount){
+      await approve(parsedAmount)
+    }
+    // return true;
+    // const { isSuccess, error} = await 
+    writeContract({ 
+      abi: CONTRACT_ABI,
+      address: CONTRACT_ADDRESS,
+      functionName: 'buyTokens',
+      args: [
+        parsedAmount,
+      ],
+      chainId: sepolia.id,
+   })
+  //  if(isSuccess){
+    // console.log("success",isSuccess)
+    return true 
+  //  }
+   }
 
-  const getOwner = async() =>  {
+   const approve = async (amount : bigint) => {
+    console.log("approving, please wait...");
+    writeContract({ 
+      abi: TOKEN_ABI,
+      address: TOKEN_ADDRESS,
+      functionName: 'approve',
+      args: [
+        CONTRACT_ADDRESS,
+        amount,
+      ],
+      chainId: sepolia.id,
+   })
+   }
+
+
+   const getAllowance = async () => {
+    console.log("getting allowance, please wait...");
+    const result = await readContract(config, {
+      abi:TOKEN_ABI,
+      address: TOKEN_ADDRESS,
+      functionName: 'allowance',
+      args: ["0x6f55456D56d3B841aeC061ad613460ABF93Bc2DA", CONTRACT_ADDRESS],
+      chainId: sepolia.id,
+    })
+    // const formatedCap = formatEther(result as bigint)
+    console.log("allowance is" ,result )
+    return result as bigint
+   }
+  const getTokenPrice = async() =>  {
       console.log("getting owner, please wait...");
       const result = await readContract(config, {
         abi:CONTRACT_ABI,
-        address: '0xE6dAEE6c1716091F41158b58F1e68401eb43A69c',
-        functionName: 'owner',
+        address: CONTRACT_ADDRESS,
+        functionName: 'getTokenPrice',
         args: [],
         chainId: sepolia.id,
       })
-    console.log("balance is" ,result )
-      return result
+      // const formatedCap = formatEther(result as bigint)
+      // console.log("token price is" ,formatedCap, result )
+      return (result as bigint).toString()
     }
 
-  async function mint() { 
-    console.log("start")
-    // const formData = 
-    // const tokenId =  
-    writeContract({
-      address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
-      abi: [
-        {
-          name: 'mint',
-          type: 'function',
-          stateMutability: 'nonpayable',
-          inputs: [{ internalType: 'uint32', name: 'tokenId', type: 'uint32' }],
-          outputs: [],
-        },
-      ],
-      functionName: 'mint',
-      args: [234435345],
-    })
-    console.log("done")
-  } 
-  const { data: hardCap } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: "getHardCap",
-    chainId: 11155111,
-  });
 
-  const { data: softCap, error } = useReadContract({
-    address: "0xE6dAEE6c1716091F41158b58F1e68401eb43A69c",
-    abi: CONTRACT_ABI,
-    functionName: "owner",
-    chainId: sepolia.id,
-  });
-  console.log("softCap: sd", error);
+    const getHardCap = async() =>  {
+      console.log("getting owner, please wait...");
+      const result = await readContract(config, {
+        abi:CONTRACT_ABI,
+        address: CONTRACT_ADDRESS,
+        functionName: 'getHardCap',
+        args: [],
+        chainId: sepolia.id,
+      })
+    console.log("hardcap  is" ,result )
+    const formatedCap = formatEther(result as bigint)
+      return formatedCap
+    }
+    const getSoftCap = async() =>  {
+      console.log("getting owner, please wait...");
+      const result = await readContract(config, {
+        abi:CONTRACT_ABI,
+        address: CONTRACT_ADDRESS,
+        functionName: 'getSoftCap',
+        args: [],
+        chainId: sepolia.id,
+      })
+      const formatedCap = formatEther(result as bigint)
+      return formatedCap
+    }
+    const getTotalSold = async() =>  {
+      console.log("getting owner, please wait...");
+      const result = await readContract(config, {
+        abi:CONTRACT_ABI,
+        address: CONTRACT_ADDRESS,
+        functionName: 'getTotalSold',
+        args: [],
+        chainId: sepolia.id,
+      })
+      const formatedCap = formatEther(result as bigint)
+      return formatedCap
+    }
+    const getUserInfo = async() =>  {
+      console.log("getting user info, please wait...");
+      let  currentAccount;
+      if(isConnected ){
+        currentAccount = address
+      }else {
+        currentAccount = "0x0000000000000000000000000000000000000000"
+      }
+      const result = await readContract(config, {
+        abi:CONTRACT_ABI,
+        address: CONTRACT_ADDRESS,
+        functionName: 'getUserInfo',
+        args: [currentAccount],
+        chainId: sepolia.id,
+      })
+      console.log("user info is",result, currentAccount, address, isConnected)
+      return result as UserInfo;
+    }
+
+
   
-
-  const { data: totalSold, isSuccess, isFetched } = useReadContract({
-    address: "0xE6dAEE6c1716091F41158b58F1e68401eb43A69c",
-    abi: CONTRACT_ABI,
-    functionName: "getTotalSold",
-    chainId: 11155111,
-  });
-
-  if (isFetched && totalSold !== undefined) {
-    console.log("Total Sold:", totalSold.toString());
-  } else {
-    console.log("Data not fetched yet.");
-  }
-  const { data: userInfo } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: "getUserInfo",
-    chainId: 11155111,
-  });
-  console.log("hardCap:", hardCap);
-console.log("softCap:", softCap);
-console.log("userInfo:", userInfo);
 
   if (!isMounted) return null;
 
   return (
     <Web3Context.Provider
       value={{
-        currentAccount,
-        hardCap: hardCap?.toString() ?? "0",
-        softCap: softCap?.toString() ?? "0",
-        totalSold: totalSold?.toString() ?? "0",
-        userInfo: userInfo?.toString() ?? "0",getOwner,
+        getUserInfo,
+        getHardCap,
+        getSoftCap,
+        getTotalSold
+        ,getTokenPrice, buyToken
       }}
     >
       {children}
