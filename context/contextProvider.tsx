@@ -50,7 +50,6 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
   // const { data: hash, writeContract } = useWriteContract()
   const buyToken = async (amount: number) => {
     
-    console.log("value from the user input", amount)
     if(amount === undefined){
       console.log("amount is undefined")
       alert("amount is undefined")
@@ -71,10 +70,7 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
       ],
       chainId: sepolia.id,
    })
-  //  if(isSuccess){
-    // console.log("success",isSuccess)
     return true 
-  //  }
    }
 
    const approve = async (amount : bigint) => {
@@ -94,15 +90,20 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
 
    const getAllowance = async () => {
     console.log("getting allowance, please wait...");
+    let  currentAccount;
+    if(isConnected ){
+        currentAccount = address
+        
+      }else {
+        return 0n
+      }
     const result = await readContract(config, {
       abi:TOKEN_ABI,
       address: TOKEN_ADDRESS,
       functionName: 'allowance',
-      args: ["0x6f55456D56d3B841aeC061ad613460ABF93Bc2DA", CONTRACT_ADDRESS],
+      args: [currentAccount, CONTRACT_ADDRESS],
       chainId: sepolia.id,
     })
-    // const formatedCap = formatEther(result as bigint)
-    console.log("allowance is" ,result )
     return result as bigint
    }
   const getTokenPrice = async() =>  {
@@ -114,8 +115,6 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
         args: [],
         chainId: sepolia.id,
       })
-      // const formatedCap = formatEther(result as bigint)
-      // console.log("token price is" ,formatedCap, result )
       return (result as bigint).toString()
     }
 
@@ -129,7 +128,6 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
         args: [],
         chainId: sepolia.id,
       })
-    console.log("hardcap  is" ,result )
     const formatedCap = formatEther(result as bigint)
       return formatedCap
     }
@@ -162,8 +160,10 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
       let  currentAccount;
       if(isConnected ){
         currentAccount = address
+       
       }else {
         currentAccount = "0x0000000000000000000000000000000000000000"
+        
       }
       const result = await readContract(config, {
         abi:CONTRACT_ABI,
@@ -172,7 +172,6 @@ export const ContextProvider = ({ children }: ContextProviderProps) => {
         args: [currentAccount],
         chainId: sepolia.id,
       })
-      console.log("user info is",result, currentAccount, address, isConnected)
       return result as UserInfo;
     }
 

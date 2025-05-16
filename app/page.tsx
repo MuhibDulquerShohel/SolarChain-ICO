@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useWeb3Context, UserInfo } from "@/context/contextProvider";
+import { formatEther } from "viem";
 
 
 export default function Home() {
@@ -26,15 +27,7 @@ export default function Home() {
 
 
 
-   const sellsPercentage = async () => {
-    const totalSoldNumber = Number(totalSold) ;
-    const hardCapNumber = Number(hardCap);
-
-    const progress =
-        hardCapNumber > 0 ? Math.floor((totalSoldNumber / hardCapNumber) * 100) : 0;
-
-        return progress;
-   }
+  
 
   useEffect(() => {
     const getInfo = async () => {
@@ -58,7 +51,32 @@ export default function Home() {
     
   },[]);
 
+  // Retry fetch if userInfo is empty
+useEffect(() => {
+  const shouldRetry =
+    !userInfo ||
+    (typeof userInfo === "object" && Object.keys(userInfo).length === 0);
+
+  if (shouldRetry) {
+    const timeout = setTimeout(async () => {
+      const retryInfo = await getUserInfo();
+      setUserInfo(retryInfo);
+    }, 5000); // retry after 5 seconds
+
+    return () => clearTimeout(timeout); // cleanup
+  }
+}, [getUserInfo, userInfo]);
+
   useEffect(() => {
+     const sellsPercentage = async () => {
+    const totalSoldNumber = Number(totalSold) ;
+    const hardCapNumber = Number(hardCap);
+
+    const progress =
+        hardCapNumber > 0 ? Math.floor((totalSoldNumber / hardCapNumber) * 100) : 0;
+
+        return progress;
+   }
     const calculatePercentage = async () => {
       const progress = await sellsPercentage();
       setPercentage(progress);
@@ -84,7 +102,7 @@ export default function Home() {
   })} Billion</h2>
             
             <div className="justify-center items-center card-actions">
-            <div className="radial-progress" style={{ "--value": {percentage} }  as React.CSSProperties  } 
+            <div className="radial-progress" style={{ "--value": "42"}  as React.CSSProperties  } 
   aria-valuenow={percentage} role="progressbar"><div className="flex justify-center items-center">{percentage}%</div></div>
           </div>
         </div>
@@ -135,10 +153,10 @@ export default function Home() {
         <div className="card min-w-full bg-base-100 card-xs shadow-sm flex flex-col justify-center items-center">
           <div className="card-body">
             <h2 className="card-title items-center justify-center">Current Token Price: {currentPrice ? 1 / Number(currentPrice): ""} </h2>
-            <h2 className="card-title items-center justify-center">Purchased Amount: {userInfo ? userInfo.tokensPurchased : ""}</h2>
-            <h2 className="card-title items-center justify-center">Paid USDT: {userInfo.amountPaid}</h2>
-            <h2 className="card-title items-center justify-center">Claimed Amount: {userInfo.tokensClaimed}</h2>
-            <h2 className="card-title items-center justify-center">Remain to claim: {userInfo.remainToClaim}</h2>
+            <h2 className="card-title items-center justify-center">Purchased Amount: {userInfo ? formatEther(userInfo.tokensPurchased) : "0"}</h2>
+            <h2 className="card-title items-center justify-center">Paid USDT: {userInfo ? formatEther(userInfo.amountPaid) : "0"}</h2>
+            <h2 className="card-title items-center justify-center">Claimed Amount: {userInfo ? formatEther(userInfo.tokensClaimed) : "0"}</h2>
+            <h2 className="card-title items-center justify-center">Remain to claim: {userInfo ? formatEther(userInfo.remainToClaim) : "0"}</h2>
             
             
         </div>
