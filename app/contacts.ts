@@ -1,4 +1,4 @@
-import tAbi from "../context/tAbi.json";
+// import tAbi from "../context/tAbi.json";
 import abi from "../context/tAbi.json";
 export const wagmiContractConfig = {
     // address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',

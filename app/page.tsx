@@ -49,7 +49,7 @@ export default function Home() {
     getInfo();
 
     
-  },[]);
+  });
 
   // Retry fetch if userInfo is empty
 useEffect(() => {
